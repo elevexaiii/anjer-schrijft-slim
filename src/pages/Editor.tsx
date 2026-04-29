@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { ChevronRight, Sparkles, CheckCircle2, Download, Clock } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import CircularGauge from "@/components/editor/CircularGauge";
 import WordCounter from "@/components/editor/WordCounter";
 import VersieHistorie from "@/components/editor/VersieHistorie";
@@ -101,17 +103,37 @@ const Editor = () => {
     setVersieOpen(false);
   };
 
-  const handleGenereren = () => {
-    saveVersion();
+  const handleGenereren = async () => {
+    if (tekst.trim().length > 0) {
+      saveVersion();
+    }
     setGenerating(true);
-    setTimeout(() => {
-      setTekst(
-        tekst +
-          "\n\nAanvullend: Naast bovengenoemde rapportages bieden wij een 24/7 digitaal meldportaal waar medewerkers van de opdrachtgever direct werkverzoeken kunnen indienen. Gemiddelde afhandeltijd: 4 uur."
-      );
-      setGenerating(false);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-tender-answer", {
+        body: {
+          vraagTekst: vraag.vraagTekst,
+          vraagTitel: vraag.titel,
+          maxWoorden: vraag.maxWoorden,
+          opdrachtgever: tender.opdrachtgever,
+          tenderNaam: tender.naam,
+          huidigeTekst: tekst || undefined,
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.answer) throw new Error("Geen antwoord ontvangen");
+
+      setTekst(data.answer);
       toast.success("AI concept gegenereerd");
-    }, 1500);
+    } catch (err: any) {
+      const msg =
+        err?.context?.error ||
+        err?.message ||
+        "Er ging iets mis bij het genereren. Probeer het opnieuw.";
+      toast.error(typeof msg === "string" ? msg : "Genereren mislukt");
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const handleExport = () => {
@@ -264,18 +286,27 @@ const Editor = () => {
 
             {/* Action buttons */}
             <div className="flex gap-3 mt-4">
-              <button
-                onClick={handleGenereren}
-                disabled={generating}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60"
-              >
-                {generating ? (
-                  <div className="h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                ) : (
-                  <Sparkles className="h-4 w-4" />
-                )}
-                AI Concept genereren
-              </button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={handleGenereren}
+                      disabled={generating}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60"
+                    >
+                      {generating ? (
+                        <div className="h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                      ) : (
+                        <Sparkles className="h-4 w-4" />
+                      )}
+                      {tekst.trim().length > 0 ? "AI concept herschrijven" : "AI Concept genereren"}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Genereert een nieuw concept op basis van Anjer's kennisbank en de tendervraag
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <button
                 onClick={saveVersion}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-primary text-primary text-sm font-medium hover:bg-primary/5 transition-colors"
@@ -288,6 +319,11 @@ const Editor = () => {
                 Verifiëren
               </button>
             </div>
+            {generating && (
+              <p className="mt-3 text-xs text-muted-foreground italic">
+                Anjer's kennisbank wordt geraadpleegd...
+              </p>
+            )}
           </div>
         </div>
 

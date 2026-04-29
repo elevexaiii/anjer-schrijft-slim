@@ -53,23 +53,23 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const jsonResponse = (payload: Record<string, unknown>, status = 200) =>
+    new Response(JSON.stringify(payload), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+
   try {
     const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
     if (!apiKey) {
-      return new Response(
-        JSON.stringify({ error: "ANTHROPIC_API_KEY ontbreekt in de configuratie." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return jsonResponse({ error: "ANTHROPIC_API_KEY ontbreekt in de configuratie." });
     }
 
     const body = (await req.json()) as RequestBody;
     const { vraagTekst, vraagTitel, maxWoorden, opdrachtgever, tenderNaam, huidigeTekst } = body;
 
     if (!vraagTekst || !vraagTitel || !maxWoorden || !opdrachtgever || !tenderNaam) {
-      return new Response(
-        JSON.stringify({ error: "Onvolledige aanvraag — verplichte velden ontbreken." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return jsonResponse({ error: "Onvolledige aanvraag — verplichte velden ontbreken." });
     }
 
     let userMessage = `Tender: ${tenderNaam}
@@ -111,7 +111,9 @@ Maximale woorden: ${maxWoorden}`;
       console.error("Anthropic API fout:", response.status, errText);
 
       let userError = "Er ging iets mis bij het genereren van het antwoord.";
-      if (response.status === 429) {
+      if (errText.toLowerCase().includes("credit balance is too low")) {
+        userError = "Claude Opus kan nu niet genereren omdat het Anthropic-tegoed op is. Vul het Anthropic-account aan en probeer opnieuw.";
+      } else if (response.status === 429) {
         userError = "Te veel verzoeken — probeer het over een moment opnieuw.";
       } else if (response.status === 401) {
         userError = "Authenticatie bij de AI-provider mislukt.";
@@ -119,36 +121,24 @@ Maximale woorden: ${maxWoorden}`;
         userError = "De AI-provider is tijdelijk niet bereikbaar.";
       }
 
-      return new Response(
-        JSON.stringify({ error: userError }),
-        { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return jsonResponse({ error: userError });
     }
 
     const data = await response.json();
     const answer = data?.content?.[0]?.text ?? "";
 
     if (!answer) {
-      return new Response(
-        JSON.stringify({ error: "Leeg antwoord ontvangen van de AI." }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      );
+      return jsonResponse({ error: "Leeg antwoord ontvangen van de AI." });
     }
 
-    return new Response(
-      JSON.stringify({ answer }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return jsonResponse({ answer });
   } catch (err) {
     const isAbort = (err as Error)?.name === "AbortError";
     console.error("generate-tender-answer fout:", err);
-    return new Response(
-      JSON.stringify({
-        error: isAbort
-          ? "De aanvraag duurde te lang. Probeer het opnieuw."
-          : "Onverwachte fout bij het genereren van het antwoord.",
-      }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return jsonResponse({
+      error: isAbort
+        ? "De aanvraag duurde te lang. Probeer het opnieuw."
+        : "Onverwachte fout bij het genereren van het antwoord.",
+    });
   }
 });

@@ -103,17 +103,37 @@ const Editor = () => {
     setVersieOpen(false);
   };
 
-  const handleGenereren = () => {
-    saveVersion();
+  const handleGenereren = async () => {
+    if (tekst.trim().length > 0) {
+      saveVersion();
+    }
     setGenerating(true);
-    setTimeout(() => {
-      setTekst(
-        tekst +
-          "\n\nAanvullend: Naast bovengenoemde rapportages bieden wij een 24/7 digitaal meldportaal waar medewerkers van de opdrachtgever direct werkverzoeken kunnen indienen. Gemiddelde afhandeltijd: 4 uur."
-      );
-      setGenerating(false);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-tender-answer", {
+        body: {
+          vraagTekst: vraag.vraagTekst,
+          vraagTitel: vraag.titel,
+          maxWoorden: vraag.maxWoorden,
+          opdrachtgever: tender.opdrachtgever,
+          tenderNaam: tender.naam,
+          huidigeTekst: tekst || undefined,
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.answer) throw new Error("Geen antwoord ontvangen");
+
+      setTekst(data.answer);
       toast.success("AI concept gegenereerd");
-    }, 1500);
+    } catch (err: any) {
+      const msg =
+        err?.context?.error ||
+        err?.message ||
+        "Er ging iets mis bij het genereren. Probeer het opnieuw.";
+      toast.error(typeof msg === "string" ? msg : "Genereren mislukt");
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const handleExport = () => {

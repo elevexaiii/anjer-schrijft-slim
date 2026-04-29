@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { ChevronRight, Sparkles, CheckCircle2, Download, Clock } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import CircularGauge from "@/components/editor/CircularGauge";
 import WordCounter from "@/components/editor/WordCounter";
 import VersieHistorie from "@/components/editor/VersieHistorie";

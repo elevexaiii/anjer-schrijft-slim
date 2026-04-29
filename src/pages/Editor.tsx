@@ -121,6 +121,7 @@ const Editor = () => {
       });
 
       if (error) throw error;
+      if (data?.error) throw new Error(String(data.error));
       if (!data?.answer) throw new Error("Geen antwoord ontvangen");
 
       setTekst(data.answer);

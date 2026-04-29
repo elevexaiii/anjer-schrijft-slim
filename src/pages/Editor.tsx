@@ -286,18 +286,27 @@ const Editor = () => {
 
             {/* Action buttons */}
             <div className="flex gap-3 mt-4">
-              <button
-                onClick={handleGenereren}
-                disabled={generating}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60"
-              >
-                {generating ? (
-                  <div className="h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                ) : (
-                  <Sparkles className="h-4 w-4" />
-                )}
-                AI Concept genereren
-              </button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={handleGenereren}
+                      disabled={generating}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60"
+                    >
+                      {generating ? (
+                        <div className="h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                      ) : (
+                        <Sparkles className="h-4 w-4" />
+                      )}
+                      {tekst.trim().length > 0 ? "AI concept herschrijven" : "AI Concept genereren"}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    Genereert een nieuw concept op basis van Anjer's kennisbank en de tendervraag
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <button
                 onClick={saveVersion}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-lg border border-primary text-primary text-sm font-medium hover:bg-primary/5 transition-colors"
@@ -310,6 +319,11 @@ const Editor = () => {
                 Verifiëren
               </button>
             </div>
+            {generating && (
+              <p className="mt-3 text-xs text-muted-foreground italic">
+                Anjer's kennisbank wordt geraadpleegd...
+              </p>
+            )}
           </div>
         </div>
 

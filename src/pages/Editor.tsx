@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { ChevronRight, Sparkles, CheckCircle2, Download, Clock, RotateCcw, BookOpen } from "lucide-react";
+import { ChevronRight, Sparkles, CheckCircle2, Download, Clock, RotateCcw, BookOpen, RefreshCw, AlertTriangle } from "lucide-react";
+import { loadScores, saveScore, hashTekst, type AIScore } from "@/lib/scores";
 import KennisbankSheet from "@/components/editor/KennisbankSheet";
 import {
   loadKennisbank,
@@ -56,6 +57,8 @@ const Editor = () => {
   const [kbSheetOpen, setKbSheetOpen] = useState(false);
   const [ingevoegdeIds, setIngevoegdeIds] = useState<string[]>([]);
   const [alleKennisItems, setAlleKennisItems] = useState<KennisItem[]>(() => loadKennisbank());
+  const [aiScores, setAiScores] = useState<Record<string, AIScore>>(() => loadScores());
+  const [scoring, setScoring] = useState(false);
 
   const vraag = tender.vragen.find((v) => v.nr === selectedVraag) || tender.vragen[0];
   const antwoordKey = `${tenderId}-${selectedVraag}`;
@@ -63,10 +66,24 @@ const Editor = () => {
   const heeftOverride = overrides[antwoordKey] !== undefined;
   const tekst = savedData.antwoorden[antwoordKey] || "";
   const versies = savedData.versies[antwoordKey] || [];
-  const scoreDetails = getScoreDetails(vraag.score);
-  const verbeterpunten = verbeterpuntenMap[antwoordKey] || [
-    "Begin met het beantwoorden van de vraag om verbeterpunten te ontvangen.",
-  ];
+  const aiScore = aiScores[antwoordKey] ?? null;
+  const huidigeHash = useMemo(() => hashTekst(tekst), [tekst]);
+  const scoreVerouderd = !!aiScore && aiScore.tekstHash !== huidigeHash;
+  const effectieveScore = aiScore?.score ?? vraag.score;
+  const scoreDetails = aiScore
+    ? [
+        { label: "Aansluiting op criterium", score: aiScore.aansluiting },
+        { label: "Concreetheid & bewijs", score: aiScore.concreetheid },
+        { label: "Volledigheid", score: aiScore.volledigheid },
+        { label: "Taal & structuur", score: aiScore.taal },
+      ]
+    : getScoreDetails(vraag.score);
+  const verbeterpunten =
+    aiScore?.verbeterpunten && aiScore.verbeterpunten.length > 0
+      ? aiScore.verbeterpunten
+      : verbeterpuntenMap[antwoordKey] || [
+          "Begin met het beantwoorden van de vraag om verbeterpunten te ontvangen.",
+        ];
   const fallbackKennisitems = kennisitemsMap[antwoordKey] || [];
 
   // Laad ingevoegde items bij vraag-wissel
@@ -194,6 +211,8 @@ const Editor = () => {
 
       setTekst(data.answer);
       toast.success("AI concept gegenereerd");
+      // Score direct opnieuw berekenen op de nieuwe tekst
+      void handleScore(data.answer);
     } catch (err: any) {
       const msg =
         err?.context?.error ||
@@ -204,6 +223,56 @@ const Editor = () => {
       setGenerating(false);
     }
   };
+
+  const handleScore = useCallback(
+    async (overrideTekst?: string) => {
+      const teBeoordelen = (overrideTekst ?? tekst).trim();
+      if (teBeoordelen.length < 10) {
+        toast.error("Schrijf eerst een antwoord voordat je een score berekent.");
+        return;
+      }
+      setScoring(true);
+      try {
+        const settings = loadSettings();
+        const { data, error } = await supabase.functions.invoke("score-tender-answer", {
+          body: {
+            vraagTekst: vraag.vraagTekst,
+            vraagTitel: vraag.titel,
+            antwoord: teBeoordelen,
+            maxWoorden: effectieveMaxWoorden,
+            opdrachtgever: tender.opdrachtgever,
+            tenderNaam: tender.naam,
+            model: settings.modelSchrijven,
+          },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(String(data.error));
+
+        const nieuweScore: AIScore = {
+          score: data.score,
+          aansluiting: data.aansluiting,
+          concreetheid: data.concreetheid,
+          volledigheid: data.volledigheid,
+          taal: data.taal,
+          verbeterpunten: data.verbeterpunten ?? [],
+          beoordeeldOp: new Date().toISOString(),
+          tekstHash: hashTekst(teBeoordelen),
+        };
+        saveScore(antwoordKey, nieuweScore);
+        setAiScores((prev) => ({ ...prev, [antwoordKey]: nieuweScore }));
+        toast.success(`Score berekend: ${nieuweScore.score}/100`);
+      } catch (err: any) {
+        const msg =
+          err?.context?.error ||
+          err?.message ||
+          "Er ging iets mis bij het berekenen van de score.";
+        toast.error(typeof msg === "string" ? msg : "Score berekenen mislukt");
+      } finally {
+        setScoring(false);
+      }
+    },
+    [tekst, vraag, effectieveMaxWoorden, tender, antwoordKey],
+  );
 
   const handleExport = () => {
     // Build plain text export of all answers
@@ -434,8 +503,41 @@ const Editor = () => {
 
         {/* RIGHT - Score Panel */}
         <div className="w-[26%] border-l border-border bg-card overflow-y-auto p-5">
-          <h3 className="font-semibold text-foreground mb-4">Kwaliteitsscore</h3>
-          <CircularGauge score={vraag.score} />
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold text-foreground">Kwaliteitsscore</h3>
+            {aiScore && (
+              <span
+                className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                  scoreVerouderd
+                    ? "bg-anjer-amber/15 text-anjer-amber"
+                    : "bg-primary/10 text-primary"
+                }`}
+                title={`Beoordeeld op ${new Date(aiScore.beoordeeldOp).toLocaleString("nl-NL")}`}
+              >
+                {scoreVerouderd ? "Verouderd" : "AI-score"}
+              </span>
+            )}
+          </div>
+          <CircularGauge score={effectieveScore} />
+
+          <button
+            onClick={() => handleScore()}
+            disabled={scoring || tekst.trim().length < 10}
+            className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-60"
+          >
+            {scoring ? (
+              <div className="h-3.5 w-3.5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
+            {aiScore ? "Score herberekenen" : "Score berekenen"}
+          </button>
+          {scoreVerouderd && (
+            <div className="mt-3 flex items-start gap-2 text-xs text-anjer-amber bg-anjer-amber/5 border border-anjer-amber/20 rounded-lg p-2.5">
+              <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+              <span>De tekst is gewijzigd na de laatste beoordeling. Bereken de score opnieuw.</span>
+            </div>
+          )}
 
           {/* Score dimensions */}
           <div className="mt-6 space-y-3">

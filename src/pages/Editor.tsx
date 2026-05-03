@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { ChevronRight, Sparkles, CheckCircle2, Download, Clock, RotateCcw, BookOpen } from "lucide-react";
+import { ChevronRight, Sparkles, CheckCircle2, Download, Clock, RotateCcw, BookOpen, RefreshCw, AlertTriangle } from "lucide-react";
+import { loadScores, saveScore, hashTekst, type AIScore } from "@/lib/scores";
 import KennisbankSheet from "@/components/editor/KennisbankSheet";
 import {
   loadKennisbank,

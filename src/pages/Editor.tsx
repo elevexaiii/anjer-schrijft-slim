@@ -67,7 +67,26 @@ const Editor = () => {
   const verbeterpunten = verbeterpuntenMap[antwoordKey] || [
     "Begin met het beantwoorden van de vraag om verbeterpunten te ontvangen.",
   ];
-  const kennisitems = kennisitemsMap[antwoordKey] || [];
+  const fallbackKennisitems = kennisitemsMap[antwoordKey] || [];
+
+  // Laad ingevoegde items bij vraag-wissel
+  useEffect(() => {
+    setIngevoegdeIds(getUsedItems(tenderId, selectedVraag));
+  }, [tenderId, selectedVraag]);
+
+  const ingevoegdeItems = useMemo(
+    () => alleKennisItems.filter((i) => ingevoegdeIds.includes(i.id)),
+    [alleKennisItems, ingevoegdeIds]
+  );
+
+  const handleInsertKennisItem = (item: KennisItem) => {
+    const insertText = buildInsertText(item);
+    const huidige = savedData.antwoorden[antwoordKey] || "";
+    const nieuw = huidige.trim().length === 0 ? insertText : `${huidige}\n\n${insertText}`;
+    setTekst(nieuw);
+    addUsedItem(tenderId, selectedVraag, item.id);
+    setIngevoegdeIds((prev) => (prev.includes(item.id) ? prev : [...prev, item.id]));
+  };
 
   const commitLimiet = () => {
     const n = Number(limietDraft);

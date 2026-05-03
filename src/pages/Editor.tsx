@@ -39,14 +39,44 @@ const Editor = () => {
   const [savedData, setSavedData] = useState(loadSavedData);
   const [generating, setGenerating] = useState(false);
   const [versieOpen, setVersieOpen] = useState(false);
+  const [overrides, setOverrides] = useState<Record<string, number>>(() => loadWoordlimietOverrides());
+  const [editingLimiet, setEditingLimiet] = useState(false);
+  const [limietDraft, setLimietDraft] = useState<string>("");
   const [lastSaved, setLastSaved] = useState<string>(
     new Date().toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })
   );
 
   const vraag = tender.vragen.find((v) => v.nr === selectedVraag) || tender.vragen[0];
   const antwoordKey = `${tenderId}-${selectedVraag}`;
+  const effectieveMaxWoorden = overrides[antwoordKey] ?? vraag.maxWoorden;
+  const heeftOverride = overrides[antwoordKey] !== undefined;
   const tekst = savedData.antwoorden[antwoordKey] || "";
   const versies = savedData.versies[antwoordKey] || [];
+  const scoreDetails = getScoreDetails(vraag.score);
+  const verbeterpunten = verbeterpuntenMap[antwoordKey] || [
+    "Begin met het beantwoorden van de vraag om verbeterpunten te ontvangen.",
+  ];
+  const kennisitems = kennisitemsMap[antwoordKey] || [];
+
+  const commitLimiet = () => {
+    const n = Number(limietDraft);
+    if (!Number.isNaN(n) && n >= 50 && n <= 3000) {
+      setWoordlimietOverride(antwoordKey, n);
+      setOverrides((prev) => ({ ...prev, [antwoordKey]: n }));
+      toast.success(`Woordlimiet aangepast naar ${n}`);
+    }
+    setEditingLimiet(false);
+  };
+
+  const resetLimiet = () => {
+    clearWoordlimietOverride(antwoordKey);
+    setOverrides((prev) => {
+      const next = { ...prev };
+      delete next[antwoordKey];
+      return next;
+    });
+    toast.success("Woordlimiet hersteld naar standaard");
+  };
   const scoreDetails = getScoreDetails(vraag.score);
   const verbeterpunten = verbeterpuntenMap[antwoordKey] || [
     "Begin met het beantwoorden van de vraag om verbeterpunten te ontvangen.",

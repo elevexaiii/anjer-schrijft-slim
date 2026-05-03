@@ -470,22 +470,59 @@ const Editor = () => {
             ))}
           </div>
 
-          {/* Kennisitems */}
-          {kennisitems.length > 0 && (
-            <>
-              <h4 className="font-semibold text-foreground mt-6 mb-3 text-sm">Gebruikte kennisitems</h4>
-              <div className="flex flex-wrap gap-2">
-                {kennisitems.map((item) => (
-                  <span
-                    key={item}
-                    className="text-xs px-3 py-1.5 rounded-full bg-primary/10 text-primary font-medium"
-                  >
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </>
+          {/* Gebruikte kennisitems */}
+          <h4 className="font-semibold text-foreground mt-6 mb-3 text-sm">
+            Gebruikte kennisitems
+          </h4>
+          {ingevoegdeItems.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {ingevoegdeItems.map((item) => (
+                <span
+                  key={item.id}
+                  className="text-xs px-3 py-1.5 rounded-full bg-anjer-green/10 text-anjer-green font-medium"
+                  title={item.beschrijving}
+                >
+                  {item.titel}
+                </span>
+              ))}
+            </div>
+          ) : fallbackKennisitems.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {fallbackKennisitems.map((item) => (
+                <span
+                  key={item}
+                  className="text-xs px-3 py-1.5 rounded-full bg-primary/10 text-primary font-medium"
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground italic">
+              Nog geen items ingevoegd.
+            </p>
           )}
+
+          {/* Kennisbank zoeken */}
+          <h4 className="font-semibold text-foreground mt-6 mb-3 text-sm">
+            Kennisbank zoeken
+          </h4>
+          <button
+            onClick={() => setKbSheetOpen(true)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-anjer-green text-anjer-green text-sm font-medium hover:bg-anjer-green/5 transition-colors"
+          >
+            <BookOpen className="h-4 w-4" />
+            Kennisbank doorzoeken
+          </button>
+        </div>
+      </div>
+
+      <KennisbankSheet
+        open={kbSheetOpen}
+        onOpenChange={setKbSheetOpen}
+        onInsert={handleInsertKennisItem}
+        ingevoegdeIds={ingevoegdeIds}
+      />
         </div>
       </div>
     </div>

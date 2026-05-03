@@ -209,8 +209,8 @@ const Aanbestedingen = () => {
               return (
                 <div
                   key={t.id}
-                  onClick={() => navigate(`/editor/${t.id}`)}
-                  className="grid grid-cols-[1fr_100px_140px_80px] gap-[14px] items-center border border-border/50 rounded-md p-[14px] mb-2 cursor-pointer hover:bg-muted/30 transition-colors"
+                  onClick={() => navigate(`/aanbestedingen/${t.id}`)}
+                  className="grid grid-cols-[1fr_100px_140px_160px] gap-[14px] items-center border border-border/50 rounded-md p-[14px] mb-2 cursor-pointer hover:bg-muted/30 transition-colors"
                 >
                   <div>
                     <p className="text-sm font-medium text-foreground">{t.naam}</p>
@@ -237,16 +237,26 @@ const Aanbestedingen = () => {
                     </p>
                     <p className="text-xs text-muted-foreground">{formatKortDatum(t.deadlineDate)}</p>
                   </div>
-                  <div className="flex justify-end">
+                  <div className="flex justify-end gap-2">
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={(e) => {
                         e.stopPropagation();
+                        navigate(`/aanbestedingen/${t.id}`);
+                      }}
+                    >
+                      Analyse
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="bg-anjer-green hover:bg-anjer-green/90 text-white"
+                      onClick={(e) => {
+                        e.stopPropagation();
                         navigate(`/editor/${t.id}`);
                       }}
                     >
-                      Open
+                      Editor
                     </Button>
                   </div>
                 </div>

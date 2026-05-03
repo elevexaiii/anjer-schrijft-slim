@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import AppLayout from "./components/AppLayout";
 import Index from "./pages/Index";
 import Aanbestedingen from "./pages/Aanbestedingen";
+import AanbestedingDetail from "./pages/AanbestedingDetail";
 import Editor from "./pages/Editor";
 import Kennisbank from "./pages/Kennisbank";
 import Kansen from "./pages/Kansen";
@@ -24,6 +25,7 @@ const App = () => (
           <Route element={<AppLayout />}>
             <Route path="/" element={<Index />} />
             <Route path="/aanbestedingen" element={<Aanbestedingen />} />
+            <Route path="/aanbestedingen/:id" element={<AanbestedingDetail />} />
             <Route path="/kansen" element={<Kansen />} />
             <Route path="/kennisbank" element={<Kennisbank />} />
             <Route path="/instellingen" element={<Instellingen />} />

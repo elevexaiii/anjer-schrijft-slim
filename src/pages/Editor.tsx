@@ -57,6 +57,8 @@ const Editor = () => {
   const [kbSheetOpen, setKbSheetOpen] = useState(false);
   const [ingevoegdeIds, setIngevoegdeIds] = useState<string[]>([]);
   const [alleKennisItems, setAlleKennisItems] = useState<KennisItem[]>(() => loadKennisbank());
+  const [aiScores, setAiScores] = useState<Record<string, AIScore>>(() => loadScores());
+  const [scoring, setScoring] = useState(false);
 
   const vraag = tender.vragen.find((v) => v.nr === selectedVraag) || tender.vragen[0];
   const antwoordKey = `${tenderId}-${selectedVraag}`;
@@ -64,10 +66,24 @@ const Editor = () => {
   const heeftOverride = overrides[antwoordKey] !== undefined;
   const tekst = savedData.antwoorden[antwoordKey] || "";
   const versies = savedData.versies[antwoordKey] || [];
-  const scoreDetails = getScoreDetails(vraag.score);
-  const verbeterpunten = verbeterpuntenMap[antwoordKey] || [
-    "Begin met het beantwoorden van de vraag om verbeterpunten te ontvangen.",
-  ];
+  const aiScore = aiScores[antwoordKey] ?? null;
+  const huidigeHash = useMemo(() => hashTekst(tekst), [tekst]);
+  const scoreVerouderd = !!aiScore && aiScore.tekstHash !== huidigeHash;
+  const effectieveScore = aiScore?.score ?? vraag.score;
+  const scoreDetails = aiScore
+    ? [
+        { label: "Aansluiting op criterium", score: aiScore.aansluiting },
+        { label: "Concreetheid & bewijs", score: aiScore.concreetheid },
+        { label: "Volledigheid", score: aiScore.volledigheid },
+        { label: "Taal & structuur", score: aiScore.taal },
+      ]
+    : getScoreDetails(vraag.score);
+  const verbeterpunten =
+    aiScore?.verbeterpunten && aiScore.verbeterpunten.length > 0
+      ? aiScore.verbeterpunten
+      : verbeterpuntenMap[antwoordKey] || [
+          "Begin met het beantwoorden van de vraag om verbeterpunten te ontvangen.",
+        ];
   const fallbackKennisitems = kennisitemsMap[antwoordKey] || [];
 
   // Laad ingevoegde items bij vraag-wissel

@@ -141,14 +141,20 @@ const Editor = () => {
     }
     setGenerating(true);
     try {
+      const settings = loadSettings();
       const { data, error } = await supabase.functions.invoke("generate-tender-answer", {
         body: {
           vraagTekst: vraag.vraagTekst,
           vraagTitel: vraag.titel,
-          maxWoorden: vraag.maxWoorden,
+          maxWoorden: effectieveMaxWoorden,
           opdrachtgever: tender.opdrachtgever,
           tenderNaam: tender.naam,
           huidigeTekst: tekst || undefined,
+          model: settings.modelSchrijven,
+          temperature: settings.temperature,
+          toon: settings.toon,
+          lengtePreference: settings.lengtePreference,
+          kennisbankContext: settings.kennisbankContext,
         },
       });
 

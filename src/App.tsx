@@ -7,6 +7,7 @@ import AppLayout from "./components/AppLayout";
 import Index from "./pages/Index";
 import Editor from "./pages/Editor";
 import Kennisbank from "./pages/Kennisbank";
+import Kansen from "./pages/Kansen";
 import Instellingen from "./pages/Instellingen";
 import NotFound from "./pages/NotFound";
 
@@ -22,6 +23,7 @@ const App = () => (
           <Route element={<AppLayout />}>
             <Route path="/" element={<Index />} />
             <Route path="/aanbestedingen" element={<Index />} />
+            <Route path="/kansen" element={<Kansen />} />
             <Route path="/kennisbank" element={<Kennisbank />} />
             <Route path="/instellingen" element={<Instellingen />} />
             <Route path="/editor/:id" element={<Editor />} />

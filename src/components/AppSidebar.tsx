@@ -1,14 +1,38 @@
-import { Home, FileText, Database, Settings, User } from "lucide-react";
+import { Home, FileText, Database, Settings, User, Sparkles } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const navItems = [
   { label: "Dashboard", icon: Home, path: "/" },
+  { label: "Kansen", icon: Sparkles, path: "/kansen", badgeKey: "kansen" as const },
   { label: "Aanbestedingen", icon: FileText, path: "/aanbestedingen" },
   { label: "Kennisbank", icon: Database, path: "/kennisbank" },
   { label: "Instellingen", icon: Settings, path: "/instellingen" },
 ];
 
 const AppSidebar = () => {
+  const [nieuweKansen, setNieuweKansen] = useState<number>(0);
+
+  useEffect(() => {
+    let actief = true;
+    const laden = async () => {
+      const sinds = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { count } = await supabase
+        .from("aanbestedingen")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "nieuw")
+        .gte("toegevoegd_op", sinds);
+      if (actief && typeof count === "number") setNieuweKansen(count);
+    };
+    laden();
+    const interval = setInterval(laden, 60_000);
+    return () => {
+      actief = false;
+      clearInterval(interval);
+    };
+  }, []);
+
   return (
     <aside className="w-64 min-h-screen bg-primary flex flex-col shrink-0">
       {/* Brand */}
@@ -33,7 +57,12 @@ const AppSidebar = () => {
             }
           >
             <item.icon className="h-5 w-5" />
-            <span>{item.label}</span>
+            <span className="flex-1">{item.label}</span>
+            {item.badgeKey === "kansen" && nieuweKansen > 0 && (
+              <span className="bg-anjer-amber text-white text-xs font-semibold px-2 py-0.5 rounded-full min-w-[1.5rem] text-center">
+                {nieuweKansen}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>

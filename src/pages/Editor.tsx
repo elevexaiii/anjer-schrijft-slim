@@ -1,5 +1,13 @@
-import { useState, useCallback, useMemo } from "react";
-import { ChevronRight, Sparkles, CheckCircle2, Download, Clock, RotateCcw } from "lucide-react";
+import { useState, useCallback, useMemo, useEffect } from "react";
+import { ChevronRight, Sparkles, CheckCircle2, Download, Clock, RotateCcw, BookOpen } from "lucide-react";
+import KennisbankSheet from "@/components/editor/KennisbankSheet";
+import {
+  loadKennisbank,
+  getUsedItems,
+  addUsedItem,
+  buildInsertText,
+  type KennisItem,
+} from "@/lib/kennisbank";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,6 +53,9 @@ const Editor = () => {
   const [lastSaved, setLastSaved] = useState<string>(
     new Date().toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })
   );
+  const [kbSheetOpen, setKbSheetOpen] = useState(false);
+  const [ingevoegdeIds, setIngevoegdeIds] = useState<string[]>([]);
+  const [alleKennisItems, setAlleKennisItems] = useState<KennisItem[]>(() => loadKennisbank());
 
   const vraag = tender.vragen.find((v) => v.nr === selectedVraag) || tender.vragen[0];
   const antwoordKey = `${tenderId}-${selectedVraag}`;
@@ -56,7 +67,26 @@ const Editor = () => {
   const verbeterpunten = verbeterpuntenMap[antwoordKey] || [
     "Begin met het beantwoorden van de vraag om verbeterpunten te ontvangen.",
   ];
-  const kennisitems = kennisitemsMap[antwoordKey] || [];
+  const fallbackKennisitems = kennisitemsMap[antwoordKey] || [];
+
+  // Laad ingevoegde items bij vraag-wissel
+  useEffect(() => {
+    setIngevoegdeIds(getUsedItems(tenderId, selectedVraag));
+  }, [tenderId, selectedVraag]);
+
+  const ingevoegdeItems = useMemo(
+    () => alleKennisItems.filter((i) => ingevoegdeIds.includes(i.id)),
+    [alleKennisItems, ingevoegdeIds]
+  );
+
+  const handleInsertKennisItem = (item: KennisItem) => {
+    const insertText = buildInsertText(item);
+    const huidige = savedData.antwoorden[antwoordKey] || "";
+    const nieuw = huidige.trim().length === 0 ? insertText : `${huidige}\n\n${insertText}`;
+    setTekst(nieuw);
+    addUsedItem(tenderId, selectedVraag, item.id);
+    setIngevoegdeIds((prev) => (prev.includes(item.id) ? prev : [...prev, item.id]));
+  };
 
   const commitLimiet = () => {
     const n = Number(limietDraft);
@@ -440,24 +470,59 @@ const Editor = () => {
             ))}
           </div>
 
-          {/* Kennisitems */}
-          {kennisitems.length > 0 && (
-            <>
-              <h4 className="font-semibold text-foreground mt-6 mb-3 text-sm">Gebruikte kennisitems</h4>
-              <div className="flex flex-wrap gap-2">
-                {kennisitems.map((item) => (
-                  <span
-                    key={item}
-                    className="text-xs px-3 py-1.5 rounded-full bg-primary/10 text-primary font-medium"
-                  >
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </>
+          {/* Gebruikte kennisitems */}
+          <h4 className="font-semibold text-foreground mt-6 mb-3 text-sm">
+            Gebruikte kennisitems
+          </h4>
+          {ingevoegdeItems.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {ingevoegdeItems.map((item) => (
+                <span
+                  key={item.id}
+                  className="text-xs px-3 py-1.5 rounded-full bg-anjer-green/10 text-anjer-green font-medium"
+                  title={item.beschrijving}
+                >
+                  {item.titel}
+                </span>
+              ))}
+            </div>
+          ) : fallbackKennisitems.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {fallbackKennisitems.map((item) => (
+                <span
+                  key={item}
+                  className="text-xs px-3 py-1.5 rounded-full bg-primary/10 text-primary font-medium"
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground italic">
+              Nog geen items ingevoegd.
+            </p>
           )}
+
+          {/* Kennisbank zoeken */}
+          <h4 className="font-semibold text-foreground mt-6 mb-3 text-sm">
+            Kennisbank zoeken
+          </h4>
+          <button
+            onClick={() => setKbSheetOpen(true)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-anjer-green text-anjer-green text-sm font-medium hover:bg-anjer-green/5 transition-colors"
+          >
+            <BookOpen className="h-4 w-4" />
+            Kennisbank doorzoeken
+          </button>
         </div>
       </div>
+
+      <KennisbankSheet
+        open={kbSheetOpen}
+        onOpenChange={setKbSheetOpen}
+        onInsert={handleInsertKennisItem}
+        ingevoegdeIds={ingevoegdeIds}
+      />
     </div>
   );
 };

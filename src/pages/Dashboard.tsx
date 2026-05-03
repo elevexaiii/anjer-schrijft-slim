@@ -210,7 +210,7 @@ const Dashboard = () => {
             <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
             <p className="text-sm text-muted-foreground mt-1">
               {formatLangDatum(new Date())} · U heeft {lopend.length} actieve tender
-              {lopend.length !== 1 ? "s" : ""} en {kansenWachtend} kans
+                {kansenWachtend} kans
               {kansenWachtend !== 1 ? "en" : ""} wachtend op review
             </p>
           </div>

@@ -283,8 +283,8 @@ const Editor = () => {
                 <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary">
                   {vraag.punten} punten
                 </span>
-                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-secondary text-muted-foreground">
-                  max {vraag.maxWoorden} woorden
+                <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${heeftOverride ? "bg-anjer-amber/15 text-anjer-amber" : "bg-secondary text-muted-foreground"}`}>
+                  max {effectieveMaxWoorden} woorden{heeftOverride ? " (aangepast)" : ""}
                 </span>
               </div>
             </div>

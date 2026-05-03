@@ -8,9 +8,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-const SYSTEM_PROMPT = `Je bent een ervaren tenderschrijver voor Anjer Schoonmaak & Bedrijfsdiensten B.V., een Nederlands schoonmaak- en facilitair bedrijf gevestigd in Amsterdam.
-
-ANJER BEDRIJFSINFORMATIE:
+const DEFAULT_KENNISBANK = `ANJER BEDRIJFSINFORMATIE:
 - ISO 9001:2015 gecertificeerd
 - Werkt met DKS-systeem (Digitaal Kwaliteit Systeem) voor real-time kwaliteitsmonitoring
 - Gebruikt EU Ecolabel schoonmaakmiddelen
@@ -18,16 +16,33 @@ ANJER BEDRIJFSINFORMATIE:
 - Personeelsverloop 12% (branchegemiddelde 25%)
 - Participeert in 'Schoon Werk' programma voor mensen met afstand tot arbeidsmarkt
 - IoT-sensoren voor bezettings- en vervuilingsmonitoring
-- Klanten o.a.: Gemeente Utrecht, Rijkswaterstaat, Primark Amsterdam, Eye Filmmuseum, NS Stations Utrecht, Ministerie van Financiën
+- Klanten o.a.: Gemeente Utrecht, Rijkswaterstaat, Primark Amsterdam, Eye Filmmuseum, NS Stations Utrecht, Ministerie van Financiën`;
 
-REFERENTIE-RESULTATEN:
-- Gemeente Utrecht (2022-2024): kwaliteitsscore 8.4, communicatiescore 8.2
-- Reactietijd bij calamiteiten: max 2 uur
+type Toon = "formeel" | "neutraal" | "toegankelijk";
+type Lengte = "compact" | "gebalanceerd" | "uitgebreid";
+
+const TOON_INSTRUCTIES: Record<Toon, string> = {
+  formeel: "Schrijf in strikt formeel, zakelijk Nederlands.",
+  neutraal: "Schrijf in professioneel maar toegankelijk Nederlands.",
+  toegankelijk: "Schrijf in toegankelijk, persoonlijk maar professioneel Nederlands.",
+};
+
+const LENGTE_INSTRUCTIES: Record<Lengte, string> = {
+  compact: "Wees bondig. Schrijf korter dan de limiet als de inhoud dat toelaat.",
+  gebalanceerd: "Benut de woordlimiet effectief, zonder onnodige opvulling.",
+  uitgebreid: "Streef ernaar de woordlimiet maximaal te benutten met inhoudelijke onderbouwing.",
+};
+
+function buildSystemPrompt(kennisbank: string, toon: Toon, lengte: Lengte) {
+  return `Je bent een ervaren tenderschrijver voor Anjer Schoonmaak & Bedrijfsdiensten B.V., een Nederlands schoonmaak- en facilitair bedrijf gevestigd in Amsterdam.
+
+${kennisbank}
 
 SCHRIJFRICHTLIJNEN:
-- Schrijf in formeel Nederlands, professioneel maar toegankelijk
+- ${TOON_INSTRUCTIES[toon]}
+- ${LENGTE_INSTRUCTIES[lengte]}
 - Gebruik concrete cijfers, certificeringen en referenties — geen vage claims
-- Verwijs naar bewijsbare feiten uit bovenstaande informatie
+- Verwijs naar bewijsbare feiten uit bovenstaande bedrijfsinformatie
 - Geen marketingtaal, wel feitelijke onderbouwing
 - Houd je strikt aan de gevraagde maximale woorden
 - Beantwoord exact wat gevraagd wordt, niet meer
@@ -38,6 +53,7 @@ Genereer een tenderantwoord dat:
 2. Concrete bewijsvoering bevat (KPI's, certificeringen, referenties)
 3. Past binnen de woordlimiet
 4. Aansluit bij de specifieke opdrachtgever`;
+}
 
 interface RequestBody {
   vraagTekst: string;
@@ -46,7 +62,18 @@ interface RequestBody {
   opdrachtgever: string;
   tenderNaam: string;
   huidigeTekst?: string;
+  model?: string;
+  temperature?: number;
+  toon?: Toon;
+  lengtePreference?: Lengte;
+  kennisbankContext?: string;
 }
+
+const ALLOWED_MODELS = new Set([
+  "claude-opus-4-5",
+  "claude-sonnet-4-5",
+  "claude-haiku-4-5",
+]);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -66,11 +93,40 @@ Deno.serve(async (req) => {
     }
 
     const body = (await req.json()) as RequestBody;
-    const { vraagTekst, vraagTitel, maxWoorden, opdrachtgever, tenderNaam, huidigeTekst } = body;
+    const {
+      vraagTekst,
+      vraagTitel,
+      maxWoorden,
+      opdrachtgever,
+      tenderNaam,
+      huidigeTekst,
+      model,
+      temperature,
+      toon,
+      lengtePreference,
+      kennisbankContext,
+    } = body;
 
     if (!vraagTekst || !vraagTitel || !maxWoorden || !opdrachtgever || !tenderNaam) {
       return jsonResponse({ error: "Onvolledige aanvraag — verplichte velden ontbreken." });
     }
+
+    const safeModel = model && ALLOWED_MODELS.has(model) ? model : "claude-opus-4-5";
+    const safeTemp =
+      typeof temperature === "number" && temperature >= 0 && temperature <= 1
+        ? temperature
+        : 0.3;
+    const safeToon: Toon = (toon === "neutraal" || toon === "toegankelijk") ? toon : "formeel";
+    const safeLengte: Lengte =
+      lengtePreference === "compact" || lengtePreference === "uitgebreid"
+        ? lengtePreference
+        : "gebalanceerd";
+    const safeKennisbank =
+      kennisbankContext && kennisbankContext.trim().length > 0
+        ? kennisbankContext
+        : DEFAULT_KENNISBANK;
+
+    const systemPrompt = buildSystemPrompt(safeKennisbank, safeToon, safeLengte);
 
     let userMessage = `Tender: ${tenderNaam}
 Opdrachtgever: ${opdrachtgever}
@@ -97,10 +153,10 @@ Maximale woorden: ${maxWoorden}`;
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-opus-4-5",
+        model: safeModel,
         max_tokens: 2000,
-        temperature: 0.3,
-        system: SYSTEM_PROMPT,
+        temperature: safeTemp,
+        system: systemPrompt,
         messages: [{ role: "user", content: userMessage }],
       }),
       signal: controller.signal,
@@ -112,11 +168,13 @@ Maximale woorden: ${maxWoorden}`;
 
       let userError = "Er ging iets mis bij het genereren van het antwoord.";
       if (errText.toLowerCase().includes("credit balance is too low")) {
-        userError = "Claude Opus kan nu niet genereren omdat het Anthropic-tegoed op is. Vul het Anthropic-account aan en probeer opnieuw.";
+        userError = "Het Anthropic-tegoed is op. Vul het account aan en probeer opnieuw.";
       } else if (response.status === 429) {
         userError = "Te veel verzoeken — probeer het over een moment opnieuw.";
       } else if (response.status === 401) {
         userError = "Authenticatie bij de AI-provider mislukt.";
+      } else if (response.status === 404) {
+        userError = "Het gekozen model is niet beschikbaar. Kies een ander model in Instellingen.";
       } else if (response.status >= 500) {
         userError = "De AI-provider is tijdelijk niet bereikbaar.";
       }

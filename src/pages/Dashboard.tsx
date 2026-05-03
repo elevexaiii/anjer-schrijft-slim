@@ -109,7 +109,7 @@ const Dashboard = () => {
       : 0;
 
   // Kansen wachtend (placeholder: gebruik 0; live data niet in scope hier)
-  const kansenWachtend = 0;
+  const kansenWachtend: number = 0;
 
   // Gemiddelde score laatste 10
   const laatste10 = [...historischeTenders]

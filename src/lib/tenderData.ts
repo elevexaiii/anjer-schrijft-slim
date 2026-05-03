@@ -16,6 +16,8 @@ export interface VersieItem {
   score: number;
 }
 
+export type TenderFase = "lopend" | "ingediend" | "gewonnen" | "verloren";
+
 export interface Tender {
   id: number;
   naam: string;
@@ -27,6 +29,10 @@ export interface Tender {
   statusColor: string;
   totaalPunten: number;
   vragen: Vraag[];
+  fase?: TenderFase;
+  omschrijving?: string;
+  contractwaarde?: string;
+  sector?: string;
 }
 
 export const tenders: Tender[] = [

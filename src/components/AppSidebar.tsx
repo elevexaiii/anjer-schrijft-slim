@@ -1,10 +1,10 @@
-import { Home, FileText, Database, Settings, User, Sparkles } from "lucide-react";
+import { BarChart3, FileText, Database, Settings, User, Sparkles } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 const navItems = [
-  { label: "Dashboard", icon: Home, path: "/" },
+  { label: "Dashboard", icon: BarChart3, path: "/" },
   { label: "Kansen", icon: Sparkles, path: "/kansen", badgeKey: "kansen" as const },
   { label: "Aanbestedingen", icon: FileText, path: "/aanbestedingen" },
   { label: "Kennisbank", icon: Database, path: "/kennisbank" },

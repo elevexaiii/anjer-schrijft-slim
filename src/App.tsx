@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import AppLayout from "./components/AppLayout";
 import Index from "./pages/Index";
+import Aanbestedingen from "./pages/Aanbestedingen";
 import Editor from "./pages/Editor";
 import Kennisbank from "./pages/Kennisbank";
 import Kansen from "./pages/Kansen";
@@ -22,7 +23,7 @@ const App = () => (
         <Routes>
           <Route element={<AppLayout />}>
             <Route path="/" element={<Index />} />
-            <Route path="/aanbestedingen" element={<Index />} />
+            <Route path="/aanbestedingen" element={<Aanbestedingen />} />
             <Route path="/kansen" element={<Kansen />} />
             <Route path="/kennisbank" element={<Kennisbank />} />
             <Route path="/instellingen" element={<Instellingen />} />

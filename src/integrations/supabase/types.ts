@@ -14,7 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      aanbestedingen: {
+        Row: {
+          beschrijving: string | null
+          bron_url: string | null
+          contractwaarde_max: number | null
+          contractwaarde_min: number | null
+          cpv_codes: string[] | null
+          deadline: string | null
+          id: string
+          match_geanalyseerd_op: string | null
+          match_score: number | null
+          match_sterke_punten: string[] | null
+          match_uitleg: string | null
+          match_zwakke_punten: string[] | null
+          notities: string | null
+          opdrachtgever: string | null
+          procedure_type: string | null
+          publicatie_datum: string | null
+          publicatie_id: string
+          raw_data: Json | null
+          regio: string | null
+          status: string | null
+          titel: string
+          toegevoegd_op: string | null
+        }
+        Insert: {
+          beschrijving?: string | null
+          bron_url?: string | null
+          contractwaarde_max?: number | null
+          contractwaarde_min?: number | null
+          cpv_codes?: string[] | null
+          deadline?: string | null
+          id?: string
+          match_geanalyseerd_op?: string | null
+          match_score?: number | null
+          match_sterke_punten?: string[] | null
+          match_uitleg?: string | null
+          match_zwakke_punten?: string[] | null
+          notities?: string | null
+          opdrachtgever?: string | null
+          procedure_type?: string | null
+          publicatie_datum?: string | null
+          publicatie_id: string
+          raw_data?: Json | null
+          regio?: string | null
+          status?: string | null
+          titel: string
+          toegevoegd_op?: string | null
+        }
+        Update: {
+          beschrijving?: string | null
+          bron_url?: string | null
+          contractwaarde_max?: number | null
+          contractwaarde_min?: number | null
+          cpv_codes?: string[] | null
+          deadline?: string | null
+          id?: string
+          match_geanalyseerd_op?: string | null
+          match_score?: number | null
+          match_sterke_punten?: string[] | null
+          match_uitleg?: string | null
+          match_zwakke_punten?: string[] | null
+          notities?: string | null
+          opdrachtgever?: string | null
+          procedure_type?: string | null
+          publicatie_datum?: string | null
+          publicatie_id?: string
+          raw_data?: Json | null
+          regio?: string | null
+          status?: string | null
+          titel?: string
+          toegevoegd_op?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

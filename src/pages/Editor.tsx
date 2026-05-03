@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { ChevronRight, Sparkles, CheckCircle2, Download, Clock } from "lucide-react";
+import { useState, useCallback, useMemo } from "react";
+import { ChevronRight, Sparkles, CheckCircle2, Download, Clock, RotateCcw } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,12 @@ import {
   kennisitemsMap,
   type VersieItem,
 } from "@/lib/tenderData";
+import {
+  loadSettings,
+  loadWoordlimietOverrides,
+  setWoordlimietOverride,
+  clearWoordlimietOverride,
+} from "@/lib/settings";
 
 const getScoreColor = (score: number) => {
   if (score >= 80) return "bg-primary";
@@ -33,12 +39,17 @@ const Editor = () => {
   const [savedData, setSavedData] = useState(loadSavedData);
   const [generating, setGenerating] = useState(false);
   const [versieOpen, setVersieOpen] = useState(false);
+  const [overrides, setOverrides] = useState<Record<string, number>>(() => loadWoordlimietOverrides());
+  const [editingLimiet, setEditingLimiet] = useState(false);
+  const [limietDraft, setLimietDraft] = useState<string>("");
   const [lastSaved, setLastSaved] = useState<string>(
     new Date().toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })
   );
 
   const vraag = tender.vragen.find((v) => v.nr === selectedVraag) || tender.vragen[0];
   const antwoordKey = `${tenderId}-${selectedVraag}`;
+  const effectieveMaxWoorden = overrides[antwoordKey] ?? vraag.maxWoorden;
+  const heeftOverride = overrides[antwoordKey] !== undefined;
   const tekst = savedData.antwoorden[antwoordKey] || "";
   const versies = savedData.versies[antwoordKey] || [];
   const scoreDetails = getScoreDetails(vraag.score);
@@ -46,6 +57,27 @@ const Editor = () => {
     "Begin met het beantwoorden van de vraag om verbeterpunten te ontvangen.",
   ];
   const kennisitems = kennisitemsMap[antwoordKey] || [];
+
+  const commitLimiet = () => {
+    const n = Number(limietDraft);
+    if (!Number.isNaN(n) && n >= 50 && n <= 3000) {
+      setWoordlimietOverride(antwoordKey, n);
+      setOverrides((prev) => ({ ...prev, [antwoordKey]: n }));
+      toast.success(`Woordlimiet aangepast naar ${n}`);
+    }
+    setEditingLimiet(false);
+  };
+
+  const resetLimiet = () => {
+    clearWoordlimietOverride(antwoordKey);
+    setOverrides((prev) => {
+      const next = { ...prev };
+      delete next[antwoordKey];
+      return next;
+    });
+    toast.success("Woordlimiet hersteld naar standaard");
+  };
+
 
   const setTekst = useCallback(
     (newTekst: string) => {
@@ -109,14 +141,20 @@ const Editor = () => {
     }
     setGenerating(true);
     try {
+      const settings = loadSettings();
       const { data, error } = await supabase.functions.invoke("generate-tender-answer", {
         body: {
           vraagTekst: vraag.vraagTekst,
           vraagTitel: vraag.titel,
-          maxWoorden: vraag.maxWoorden,
+          maxWoorden: effectieveMaxWoorden,
           opdrachtgever: tender.opdrachtgever,
           tenderNaam: tender.naam,
           huidigeTekst: tekst || undefined,
+          model: settings.modelSchrijven,
+          temperature: settings.temperature,
+          toon: settings.toon,
+          lengtePreference: settings.lengtePreference,
+          kennisbankContext: settings.kennisbankContext,
         },
       });
 
@@ -245,8 +283,8 @@ const Editor = () => {
                 <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary">
                   {vraag.punten} punten
                 </span>
-                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-secondary text-muted-foreground">
-                  max {vraag.maxWoorden} woorden
+                <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${heeftOverride ? "bg-anjer-amber/15 text-anjer-amber" : "bg-secondary text-muted-foreground"}`}>
+                  max {effectieveMaxWoorden} woorden{heeftOverride ? " (aangepast)" : ""}
                 </span>
               </div>
             </div>
@@ -264,7 +302,43 @@ const Editor = () => {
                   <span className="text-xs text-muted-foreground">
                     Laatst opgeslagen om {lastSaved}
                   </span>
-                  <WordCounter tekst={tekst} maxWoorden={vraag.maxWoorden} />
+                  <WordCounter tekst={tekst} maxWoorden={effectieveMaxWoorden} />
+                  {editingLimiet ? (
+                    <input
+                      type="number"
+                      min={50}
+                      max={3000}
+                      autoFocus
+                      value={limietDraft}
+                      onChange={(e) => setLimietDraft(e.target.value)}
+                      onBlur={commitLimiet}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitLimiet();
+                        if (e.key === "Escape") setEditingLimiet(false);
+                      }}
+                      className="w-20 text-xs px-2 py-1 rounded border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setLimietDraft(String(effectieveMaxWoorden));
+                        setEditingLimiet(true);
+                      }}
+                      className={`text-xs hover:text-foreground transition-colors ${heeftOverride ? "text-anjer-amber font-medium" : "text-muted-foreground"}`}
+                      title="Klik om woordlimiet voor deze vraag aan te passen"
+                    >
+                      max {effectieveMaxWoorden} woorden
+                    </button>
+                  )}
+                  {heeftOverride && !editingLimiet && (
+                    <button
+                      onClick={resetLimiet}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                      title="Herstel naar standaard"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                    </button>
+                  )}
                 </div>
                 <VersieHistorie
                   versies={versies}

@@ -211,6 +211,8 @@ const Editor = () => {
 
       setTekst(data.answer);
       toast.success("AI concept gegenereerd");
+      // Score direct opnieuw berekenen op de nieuwe tekst
+      void handleScore(data.answer);
     } catch (err: any) {
       const msg =
         err?.context?.error ||
@@ -221,6 +223,56 @@ const Editor = () => {
       setGenerating(false);
     }
   };
+
+  const handleScore = useCallback(
+    async (overrideTekst?: string) => {
+      const teBeoordelen = (overrideTekst ?? tekst).trim();
+      if (teBeoordelen.length < 10) {
+        toast.error("Schrijf eerst een antwoord voordat je een score berekent.");
+        return;
+      }
+      setScoring(true);
+      try {
+        const settings = loadSettings();
+        const { data, error } = await supabase.functions.invoke("score-tender-answer", {
+          body: {
+            vraagTekst: vraag.vraagTekst,
+            vraagTitel: vraag.titel,
+            antwoord: teBeoordelen,
+            maxWoorden: effectieveMaxWoorden,
+            opdrachtgever: tender.opdrachtgever,
+            tenderNaam: tender.naam,
+            model: settings.modelSchrijven,
+          },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(String(data.error));
+
+        const nieuweScore: AIScore = {
+          score: data.score,
+          aansluiting: data.aansluiting,
+          concreetheid: data.concreetheid,
+          volledigheid: data.volledigheid,
+          taal: data.taal,
+          verbeterpunten: data.verbeterpunten ?? [],
+          beoordeeldOp: new Date().toISOString(),
+          tekstHash: hashTekst(teBeoordelen),
+        };
+        saveScore(antwoordKey, nieuweScore);
+        setAiScores((prev) => ({ ...prev, [antwoordKey]: nieuweScore }));
+        toast.success(`Score berekend: ${nieuweScore.score}/100`);
+      } catch (err: any) {
+        const msg =
+          err?.context?.error ||
+          err?.message ||
+          "Er ging iets mis bij het berekenen van de score.";
+        toast.error(typeof msg === "string" ? msg : "Score berekenen mislukt");
+      } finally {
+        setScoring(false);
+      }
+    },
+    [tekst, vraag, effectieveMaxWoorden, tender, antwoordKey],
+  );
 
   const handleExport = () => {
     // Build plain text export of all answers

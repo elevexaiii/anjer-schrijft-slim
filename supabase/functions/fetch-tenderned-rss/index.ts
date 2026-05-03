@@ -107,7 +107,13 @@ async function fetchDetail(publicatie_id: string): Promise<{
 } | null> {
   const url = `https://www.tenderned.nl/papi/tenderned-rs-tns/v2/publicaties/${publicatie_id}/public-xml`;
   try {
-    const res = await fetch(url, { headers: { Accept: "application/xml" } });
+    const res = await fetch(url, {
+      headers: {
+        Accept: "*/*",
+        "User-Agent":
+          "Mozilla/5.0 (compatible; AnjerTenderBot/1.0; +https://anjer.nl)",
+      },
+    });
     if (!res.ok) return null;
     const xml = await res.text();
 

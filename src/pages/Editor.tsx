@@ -77,11 +77,7 @@ const Editor = () => {
     });
     toast.success("Woordlimiet hersteld naar standaard");
   };
-  const scoreDetails = getScoreDetails(vraag.score);
-  const verbeterpunten = verbeterpuntenMap[antwoordKey] || [
-    "Begin met het beantwoorden van de vraag om verbeterpunten te ontvangen.",
-  ];
-  const kennisitems = kennisitemsMap[antwoordKey] || [];
+
 
   const setTekst = useCallback(
     (newTekst: string) => {

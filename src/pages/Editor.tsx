@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react";
-import { ChevronRight, Sparkles, CheckCircle2, Download, Clock } from "lucide-react";
+import { useState, useCallback, useMemo } from "react";
+import { ChevronRight, Sparkles, CheckCircle2, Download, Clock, RotateCcw } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,6 +17,12 @@ import {
   kennisitemsMap,
   type VersieItem,
 } from "@/lib/tenderData";
+import {
+  loadSettings,
+  loadWoordlimietOverrides,
+  setWoordlimietOverride,
+  clearWoordlimietOverride,
+} from "@/lib/settings";
 
 const getScoreColor = (score: number) => {
   if (score >= 80) return "bg-primary";

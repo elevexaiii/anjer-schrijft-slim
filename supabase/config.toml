@@ -1,1 +1,10 @@
 project_id = "nboqhqpcuerzpiknywrr"
+
+[functions.fetch-tenderned-rss]
+verify_jwt = false
+
+[functions.match-aanbesteding]
+verify_jwt = false
+
+[functions.match-batch]
+verify_jwt = false

@@ -302,7 +302,43 @@ const Editor = () => {
                   <span className="text-xs text-muted-foreground">
                     Laatst opgeslagen om {lastSaved}
                   </span>
-                  <WordCounter tekst={tekst} maxWoorden={vraag.maxWoorden} />
+                  <WordCounter tekst={tekst} maxWoorden={effectieveMaxWoorden} />
+                  {editingLimiet ? (
+                    <input
+                      type="number"
+                      min={50}
+                      max={3000}
+                      autoFocus
+                      value={limietDraft}
+                      onChange={(e) => setLimietDraft(e.target.value)}
+                      onBlur={commitLimiet}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitLimiet();
+                        if (e.key === "Escape") setEditingLimiet(false);
+                      }}
+                      className="w-20 text-xs px-2 py-1 rounded border border-input bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setLimietDraft(String(effectieveMaxWoorden));
+                        setEditingLimiet(true);
+                      }}
+                      className={`text-xs hover:text-foreground transition-colors ${heeftOverride ? "text-anjer-amber font-medium" : "text-muted-foreground"}`}
+                      title="Klik om woordlimiet voor deze vraag aan te passen"
+                    >
+                      max {effectieveMaxWoorden} woorden
+                    </button>
+                  )}
+                  {heeftOverride && !editingLimiet && (
+                    <button
+                      onClick={resetLimiet}
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                      title="Herstel naar standaard"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                    </button>
+                  )}
                 </div>
                 <VersieHistorie
                   versies={versies}

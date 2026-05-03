@@ -53,6 +53,9 @@ const Editor = () => {
   const [lastSaved, setLastSaved] = useState<string>(
     new Date().toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })
   );
+  const [kbSheetOpen, setKbSheetOpen] = useState(false);
+  const [ingevoegdeIds, setIngevoegdeIds] = useState<string[]>([]);
+  const [alleKennisItems, setAlleKennisItems] = useState<KennisItem[]>(() => loadKennisbank());
 
   const vraag = tender.vragen.find((v) => v.nr === selectedVraag) || tender.vragen[0];
   const antwoordKey = `${tenderId}-${selectedVraag}`;

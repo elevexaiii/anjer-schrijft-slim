@@ -1,5 +1,13 @@
-import { useState, useCallback, useMemo } from "react";
-import { ChevronRight, Sparkles, CheckCircle2, Download, Clock, RotateCcw } from "lucide-react";
+import { useState, useCallback, useMemo, useEffect } from "react";
+import { ChevronRight, Sparkles, CheckCircle2, Download, Clock, RotateCcw, BookOpen } from "lucide-react";
+import KennisbankSheet from "@/components/editor/KennisbankSheet";
+import {
+  loadKennisbank,
+  getUsedItems,
+  addUsedItem,
+  buildInsertText,
+  type KennisItem,
+} from "@/lib/kennisbank";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";

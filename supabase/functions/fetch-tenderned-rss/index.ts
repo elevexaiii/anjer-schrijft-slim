@@ -214,7 +214,11 @@ Deno.serve(async (req) => {
 
     console.log("RSS feed ophalen:", RSS_URL);
     const rssRes = await fetch(RSS_URL, {
-      headers: { Accept: "application/rss+xml, application/xml" },
+      headers: {
+        Accept: "*/*",
+        "User-Agent":
+          "Mozilla/5.0 (compatible; AnjerTenderBot/1.0; +https://anjer.nl)",
+      },
     });
     if (!rssRes.ok) {
       console.error("RSS-feed onbereikbaar:", rssRes.status);

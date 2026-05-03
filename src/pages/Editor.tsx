@@ -523,8 +523,6 @@ const Editor = () => {
         onInsert={handleInsertKennisItem}
         ingevoegdeIds={ingevoegdeIds}
       />
-        </div>
-      </div>
     </div>
   );
 };
